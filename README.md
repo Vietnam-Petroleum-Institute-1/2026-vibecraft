@@ -108,7 +108,7 @@ vibecraft/
 | Đọc `AGENTS.md` gốc, không cần file riêng | Codex, Aider | — |
 | Multi-file rule pack theo chủ đề/glob | Cursor, GitHub Copilot, Cline, Claude Code, Continue | `.cursor/rules/*.mdc`, `.github/instructions/*.instructions.md`, `.clinerules/*.md`, `.claude/rules/*.md` + `CLAUDE.md`, `.continue/rules/*.md` |
 
-Chọn AI tool nào cần setup qua `--ai` (hoặc câu hỏi tương tác đầu tiên) — mặc định tất cả 10, không bắt buộc chọn nếu team chỉ dùng 1-2 AI.
+Chọn AI tool nào cần setup qua `--ai` (hoặc câu hỏi tương tác đầu tiên) — mặc định chỉ Claude Code nếu bấm Enter không chọn gì, không bắt buộc chọn nếu team chỉ dùng 1-2 AI. Muốn setup cả 10, truyền tường minh `--ai cursor,windsurf,claude-code,cline,gemini-cli,github-copilot,zed,codex,aider,continue` hoặc gõ đủ số 1-10 ở câu hỏi tương tác.
 
 ## MVC bắt buộc
 

@@ -22,7 +22,7 @@ TARGET_DIR="${PWD}"
 PROJECT_NAME="$(basename "$TARGET_DIR")"
 
 # ── Default values ───────────────────────────────────────────
-AI_TOOLS=""   # comma-separated; empty means "not yet chosen", defaults to all 10 if never asked
+AI_TOOLS=""   # comma-separated; empty means "not yet chosen", defaults to claude-code if never asked
 TYPE=""
 LANG=""
 FRAMEWORK=""
@@ -129,7 +129,7 @@ show_help() {
 Usage: vibecraft init [options]
 
 Options:
-  --ai        Comma-separated AI tool(s) to set up rules for (default: all 10)
+  --ai        Comma-separated AI tool(s) to set up rules for (default: claude-code)
               cursor | windsurf | claude-code | cline | gemini-cli |
               github-copilot | zed | codex | aider | continue
   --type      app-fullstack | app-be-only | app-fe-only | tool-script
@@ -183,16 +183,16 @@ done
 # ── Interactive questions ────────────────────────────────────
 ask_ai_tools() {
   echo ""
-  echo -e "  ${BOLD}? Team dùng AI coding tool nào? (nhiều lựa chọn, cách nhau bởi dấu phẩy, Enter = tất cả)${NC}"
+  echo -e "  ${BOLD}? Team dùng AI coding tool nào? (nhiều lựa chọn, cách nhau bởi dấu phẩy, Enter = Claude Code)${NC}"
   echo "    1) Cursor            6) GitHub Copilot"
   echo "    2) Windsurf          7) Zed"
   echo "    3) Claude Code       8) Codex"
   echo "    4) Cline             9) Aider"
   echo "    5) Gemini CLI       10) Continue"
-  read -rp "  Choice(s) [Enter = all]: " choices
+  read -rp "  Choice(s) [Enter = Claude Code]: " choices
 
   if [[ -z "$choices" ]]; then
-    AI_TOOLS="cursor windsurf claude-code cline gemini-cli github-copilot zed codex aider continue"
+    AI_TOOLS="claude-code"
     return
   fi
 
@@ -208,7 +208,7 @@ ask_ai_tools() {
     fi
   done
   AI_TOOLS="$(echo "$AI_TOOLS" | xargs)" # trim
-  [[ -z "$AI_TOOLS" ]] && { log_warn "Không chọn được AI nào hợp lệ, dùng mặc định (tất cả)"; ask_ai_tools; }
+  [[ -z "$AI_TOOLS" ]] && { log_warn "Không chọn được AI nào hợp lệ, hỏi lại"; ask_ai_tools; }
   # Explicit `return 0`: without it, whenever the line above's `[[ -z ... ]]`
   # test is FALSE (the normal case — user picked at least one valid tool),
   # this is the LAST command bash actually runs in the function, so

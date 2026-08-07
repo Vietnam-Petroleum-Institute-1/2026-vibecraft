@@ -17,7 +17,7 @@ Confirm the target directory with the user (default: current working directory).
 
 ## Step 1 — Ask which AI coding tools the team uses
 
-Mirrors `ask_ai_tools()`. Ask the user (multi-select, default = all):
+Mirrors `ask_ai_tools()`. Ask the user (multi-select, default = Claude Code only):
 
 1. Cursor
 2. Windsurf
@@ -30,7 +30,7 @@ Mirrors `ask_ai_tools()`. Ask the user (multi-select, default = all):
 9. Aider
 10. Continue
 
-If the user has no preference or says "all"/"whatever the team uses", pick all 10 — this only controls which AI config files (`.cursor/rules/`, `CLAUDE.md`, `.windsurfrules`, etc.) get generated; it never limits functionality.
+If the user has no preference, default to Claude Code only (`claude-code`) — matches `init.sh`'s own Enter-with-no-input default. If the user explicitly says "all"/"whatever the team uses", pick all 10 instead. This only controls which AI config files (`.cursor/rules/`, `CLAUDE.md`, `.windsurfrules`, etc.) get generated; it never limits functionality.
 
 Collect the picks into a comma-separated value for `--ai`, e.g. `claude-code,cursor`.
 
