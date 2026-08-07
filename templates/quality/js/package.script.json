@@ -1,0 +1,50 @@
+{
+  "name": "[PROJECT_NAME]",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "[PROJECT_NAME]": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "lint": "eslint \"{src,tests}/**/*.ts\" --fix",
+    "format": "prettier --write \"{src,tests}/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.ts": ["eslint --fix", "prettier --write"],
+    "*.{json,md}": ["prettier --write"]
+  },
+  "jest": {
+    "rootDir": ".",
+    "testRegex": "tests/.*\\.test\\.ts$",
+    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "collectCoverageFrom": ["src/**/*.(t|j)s"],
+    "coverageDirectory": "coverage"
+  },
+  "dependencies": {
+    "commander": "12.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.13",
+    "@types/node": "22.9.0",
+    "@typescript-eslint/eslint-plugin": "8.13.0",
+    "@typescript-eslint/parser": "8.13.0",
+    "eslint": "8.57.1",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "husky": "9.1.6",
+    "jest": "29.7.0",
+    "lint-staged": "15.2.10",
+    "prettier": "3.3.3",
+    "ts-jest": "29.2.5",
+    "ts-node": "10.9.2",
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "[PROJECT_NAME]",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Root-level tooling only (git hooks) — the apps themselves live in backend/ and frontend/.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "backend/**/*.ts": "npm --prefix backend run lint",
+    "frontend/**/*.{ts,tsx,vue}": "npm --prefix frontend run lint"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "19.6.0",
+    "@commitlint/config-conventional": "19.6.0",
+    "husky": "9.1.6",
+    "lint-staged": "15.2.10"
+  }
+}

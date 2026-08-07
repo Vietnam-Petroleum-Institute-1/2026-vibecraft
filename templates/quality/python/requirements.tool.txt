@@ -1,0 +1,7 @@
+typer==0.27.1
+
+# dev / test / lint
+ruff==0.7.3
+black==24.10.0
+mypy==1.13.0
+pytest==8.3.3

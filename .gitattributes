@@ -1,0 +1,18 @@
+# Force LF for every executable/shell-interpreted file, regardless of the
+# cloning machine's core.autocrlf setting. On Windows, a CRLF-mangled shebang
+# line or a stray \r before a bash keyword breaks the script outright
+# ($'\r': command not found, or "bad interpreter" on the shebang) — this
+# repo's whole install path (init.sh -> symlink-setup.sh -> generated
+# .husky/* hooks) is bash, so this must be locked down before init.sh ships.
+* text=auto eol=lf
+
+*.sh              text eol=lf
+*.bash            text eol=lf
+scripts/*         text eol=lf
+templates/hooks/husky/*  text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary

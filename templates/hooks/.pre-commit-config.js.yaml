@@ -1,0 +1,36 @@
+# .pre-commit-config.yaml — JS/TS-only projects (Husky handles eslint/prettier separately)
+default_stages: [pre-commit]
+fail_fast: false
+
+repos:
+  # ── Secret scanning (ALWAYS first) ─────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+        name: "Detect hardcoded secrets"
+
+  # ── General file hygiene ────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: detect-private-key
+
+  # ── Conventional commits ────────────────────────────────────
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, style, refactor, test, chore, perf, ci]
+
+# ESLint/Prettier run through Husky (.husky/pre-commit + lint-staged), not here —
+# pre-commit's Node support requires npm install per-hook and duplicates what Husky
+# already does natively inside the project's own node_modules.
