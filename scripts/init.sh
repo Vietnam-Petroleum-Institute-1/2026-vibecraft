@@ -626,7 +626,7 @@ generate_quality() {
 
   # Shared
   copy_file "$TEMPLATES_DIR/quality/shared/.editorconfig"       "$TARGET_DIR/.editorconfig"
-  copy_file "$TEMPLATES_DIR/quality/shared/.gitignore"          "$TARGET_DIR/.gitignore"
+  copy_file "$TEMPLATES_DIR/quality/shared/gitignore.template"  "$TARGET_DIR/.gitignore"
   copy_file "$TEMPLATES_DIR/quality/shared/commitlint.config.js" "$TARGET_DIR/commitlint.config.js"
 
   if [[ "$LANG" == "typescript" ]]; then
