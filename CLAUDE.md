@@ -18,6 +18,16 @@ This repo is built according to the phased plan in the sibling planning repo: `.
 
 ```
 vibecraft/
+├── .claude-plugin/
+│   ├── plugin.json           # Claude Code plugin manifest — no "skills" field needed, Claude Code
+│   │                          # auto-discovers skills/ at plugin root (= this repo's root, since
+│   │                          # .claude-plugin/ lives at repo root too)
+│   └── marketplace.json      # Self-hosted single-plugin marketplace, source: "./" (repo root)
+├── plugin.json               # Agent Plugins 1.0 manifest (open standard, Aug 2026 — Cursor, Codex CLI,
+│                              # GitHub Copilot CLI/VS Code/app read this directly). Same auto-discovery
+│                              # convention as Claude Code: skills/ at root, no explicit reference needed.
+│                              # Both manifests point at the SAME skills/vibecraft-init/ below — zero
+│                              # duplication. See plans/11-plugin-packaging.md.
 ├── package.json             # name/private:true/bin → bin/vibecraft.js, engines.node — no build step,
 │                             # just makes the repo `npx github:<org>/<repo>#<tag>`-able
 ├── bin/vibecraft.js         # Thin Node launcher for the npx channel — resolves scripts/init.sh,
@@ -34,9 +44,12 @@ vibecraft/
 │   │                          # init.sh's generate_agents_md() assembles these (RULE_ORDER array +
 │   │                          # section_applies() gating) into AGENTS.md; symlink-setup.sh re-splits
 │   │                          # per-tool from the <!-- vibecraft:section --> markers it wrote.
-│   ├── skills/                # 11 skills (codeagent, security-audit, code-review, testing,
-│   │                          # performance, database, docker, backend, frontend, python-api, react),
-│   │                          # each templates/skills/<slug>/SKILL.md. init.sh's generate_skills()
+│   ├── skills/                # 13 skills (codeagent, security-audit, code-review, testing,
+│   │                          # performance, database, docker, backend, frontend, ui-design,
+│   │                          # ui-design-review, python-api, react), each templates/skills/<slug>/
+│   │                          # SKILL.md. ui-design/ui-design-review also ship a NOTICE.md (3rd-party
+│   │                          # license attribution — Apache 2.0 / MIT sources); fanout_skill() copies
+│   │                          # it alongside SKILL.md whenever present. init.sh's generate_skills()
 │   │                          # (SKILL_ORDER array, same section_applies() gating) fans each one out
 │   │                          # via fanout_skill() to every AI tool with a confirmed official skill
 │   │                          # path: .claude/skills/, .cursor/skills/, .agents/skills/ (Codex — NOT

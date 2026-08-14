@@ -825,7 +825,7 @@ EOF
 # (checked via section_applies(), same values as RULE_ORDER) decides whether
 # it's generated for this project — no per-skill bash conditional needed
 # here, adding a new skill is just dropping a new template file + slug.
-SKILL_ORDER=(codeagent security-audit code-review testing performance database docker backend frontend python-api react)
+SKILL_ORDER=(codeagent security-audit code-review testing performance database docker backend frontend ui-design ui-design-review python-api react)
 
 # fanout_skill <slug> — writes templates/skills/<slug>/SKILL.md to all 6
 # confirmed tool paths (only for tools actually in $AI_TOOLS). Placeholders
@@ -835,16 +835,21 @@ SKILL_ORDER=(codeagent security-audit code-review testing performance database d
 # AGENTS.md and flat tools don't — see symlink-setup.sh).
 fanout_skill() {
   local slug="$1"
-  local skill_content
+  local skill_content notice_content=""
   skill_content=$(cat "$TEMPLATES_DIR/skills/$slug/SKILL.md")
   skill_content="${skill_content//\[VERIFY_COMMANDS\]/$MARKED_VERIFY_CMDS}"
   skill_content="${skill_content//@VIBECRAFT_AMP@/\&}"
+  [[ -f "$TEMPLATES_DIR/skills/$slug/NOTICE.md" ]] && notice_content=$(cat "$TEMPLATES_DIR/skills/$slug/NOTICE.md")
 
   local write_skill
   write_skill() {
     local tool="$1" target="$2" rules_ref="$3"
     [[ " $AI_TOOLS " == *" $tool "* ]] || return 0
     write_file "$TARGET_DIR/$target" "${skill_content//\[RULES_REF\]/$rules_ref}"
+    if [[ -n "$notice_content" ]]; then
+      write_file "$TARGET_DIR/$(dirname "$target")/NOTICE.md" "$notice_content"
+    fi
+    return 0
   }
   write_skill claude-code    ".claude/skills/$slug/SKILL.md"   '`.claude/rules/*.md`'
   write_skill cursor         ".cursor/skills/$slug/SKILL.md"   '`.cursor/rules/*.mdc`'

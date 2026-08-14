@@ -1,0 +1,14 @@
+{
+  "name": "vibecraft-marketplace",
+  "owner": {
+    "name": "VibeCraft"
+  },
+  "description": "Self-hosted marketplace for the VibeCraft guardrails installer",
+  "plugins": [
+    {
+      "name": "vibecraft",
+      "source": "./",
+      "description": "Install VibeCraft's production-ready guardrails into the current project"
+    }
+  ]
+}

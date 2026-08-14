@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "vibecraft",
+  "version": "0.1.3",
+  "description": "Install VibeCraft's production-ready guardrails (AGENTS.md fan-out to 10 AI tools, ESLint/Prettier/ruff/mypy configs, pre-commit + gitleaks, GitHub Actions CI/CD, Dockerfile, MVC folder scaffold) into the current project",
+  "author": {
+    "name": "VibeCraft"
+  },
+  "license": "UNLICENSED",
+  "keywords": ["scaffold", "agents-md", "vibe-coding", "guardrails", "ci-cd", "security"]
+}

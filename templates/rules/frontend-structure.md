@@ -61,6 +61,10 @@ function UserProfile() {
 }
 ```
 
+### Visual/UX work
+
+Building or reshaping any UI (a new page, a redesigned section, a new component with visual weight) is not just structural — consult the `ui-design` skill for aesthetic direction before writing markup, and hold the result against `ui-design-review`'s checklist before calling it done. Both apply on top of the structure rules above, not instead of them.
+
 ### Setup commands
 
 ```bash

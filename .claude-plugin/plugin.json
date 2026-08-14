@@ -1,0 +1,10 @@
+{
+  "name": "vibecraft",
+  "description": "Install VibeCraft's production-ready guardrails (AGENTS.md fan-out to 10 AI tools, ESLint/Prettier/ruff/mypy configs, pre-commit + gitleaks, GitHub Actions CI/CD, Dockerfile, MVC folder scaffold) into the current project",
+  "version": "0.1.3",
+  "author": {
+    "name": "VibeCraft"
+  },
+  "license": "UNLICENSED",
+  "keywords": ["scaffold", "agents-md", "vibe-coding", "guardrails", "ci-cd", "security"]
+}
