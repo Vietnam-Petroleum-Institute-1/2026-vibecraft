@@ -26,6 +26,7 @@ jobs:
           args: detect --log-opts="--all"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   # ─── OWASP Dependency-Check weekly ───────────────────────
   dependency-check-weekly:
@@ -51,22 +52,30 @@ jobs:
           name: dep-check-weekly-${{ github.run_id }}
           path: reports/
 
-      - name: Notify Slack on failure
-        if: failure()
-        uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1.27.1
-        with:
-          payload: |
-            {
-              "text": "OWASP Dependency-Check found critical vulnerabilities in ${{ github.repository }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Report>"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-
   # ─── ZAP full scan on staging (advisory) ─────────────────
-  zap-full-weekly:
-    name: ZAP Full Scan (Weekly)
+  # Cron still fires weekly, but this is the priciest job in the pipeline,
+  # so the real scan only runs in the first 7 days of the month.
+  check-monthly-gate:
+    name: Check Monthly ZAP Gate
     runs-on: ubuntu-latest
+    outputs:
+      run_zap: ${{ steps.check.outputs.run_zap }}
+    steps:
+      - name: Check if within first 7 days of month
+        id: check
+        run: |
+          DAY=$(date +%d)
+          if [ "$DAY" -le 7 ]; then
+            echo "run_zap=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_zap=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  zap-full-monthly:
+    name: ZAP Full Scan (Monthly)
+    runs-on: ubuntu-latest
+    needs: [check-monthly-gate]
+    if: needs.check-monthly-gate.outputs.run_zap == 'true' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -80,7 +89,7 @@ jobs:
       - name: Upload ZAP report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: zap-full-weekly-${{ github.run_id }}
+          name: zap-full-monthly-${{ github.run_id }}
           path: report_html.html
         if: always()
 
@@ -88,8 +97,6 @@ jobs:
   trivy-rescan:
     name: Trivy Rescan (Latest Image)
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
     steps:
       - name: Pull latest image
         run: docker pull ${{ vars.PRODUCTION_IMAGE }}:latest
@@ -103,30 +110,10 @@ jobs:
           severity: "CRITICAL,HIGH"
           ignore-unfixed: false # include unfixed in the weekly deep scan
 
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+      # No upload-sarif (GHAS billed per committer/month on this private repo)
+      - name: Upload Trivy report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          sarif_file: trivy-weekly.sarif
+          name: trivy-weekly-${{ github.run_id }}
+          path: trivy-weekly.sarif
         if: always()
-
-  # ─── Summary report ───────────────────────────────────────
-  weekly-summary:
-    name: Security Summary
-    runs-on: ubuntu-latest
-    needs:
-      - gitleaks-full
-      - dependency-check-weekly
-      - zap-full-weekly
-      - trivy-rescan
-    if: always()
-    steps:
-      - name: Post summary to Slack
-        uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1.27.1
-        with:
-          payload: |
-            {
-              "text": "Weekly Security Scan – ${{ github.repository }}\n• Gitleaks: ${{ needs.gitleaks-full.result }}\n• Dep-Check: ${{ needs.dependency-check-weekly.result }}\n• ZAP: ${{ needs.zap-full-weekly.result }}\n• Trivy: ${{ needs.trivy-rescan.result }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

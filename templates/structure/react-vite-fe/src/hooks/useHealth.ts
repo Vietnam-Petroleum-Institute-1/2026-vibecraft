@@ -8,10 +8,12 @@ export function useHealth() {
   const [error, setError] = useState<string | null>(null);
 
   const check = useCallback(() => {
-    setError(null);
     healthService
       .check()
-      .then(setHealth)
+      .then((data) => {
+        setHealth(data);
+        setError(null);
+      })
       .catch((err: Error) => setError(err.message));
   }, []);
 

@@ -44,7 +44,7 @@ Cập nhật bản mới sau này:
 
 **Không ghi version → luôn lấy bản mới nhất.** Muốn ghim đúng 1 bản cụ thể (không tự đổi khi có bản mới), thêm `#<tag>` vào cuối URL lúc thêm marketplace:
 ```
-/plugin marketplace add https://github.com/PVN-Organization/vibecraft.git#v0.1.3
+/plugin marketplace add https://github.com/PVN-Organization/vibecraft.git#v0.2.0
 ```
 
 Dùng Cursor, Codex CLI hay GitHub Copilot thay vì Claude Code? Các tool này cũng cài được VibeCraft theo cách riêng của chúng — hỏi mình nếu cần hướng dẫn cụ thể cho tool bạn đang dùng.
@@ -59,7 +59,7 @@ Không truyền flag → hỏi từng câu như Cách 1. Vẫn cần Bash (xem m
 
 **Không ghi version → luôn lấy bản mới nhất**, y hệt Cách 2. Muốn ghim đúng 1 bản, thêm `#<tag>` vào cuối:
 ```bash
-npx github:PVN-Organization/vibecraft#v0.1.3
+npx github:PVN-Organization/vibecraft#v0.2.0
 ```
 
 Muốn trả lời sẵn luôn thay vì để script hỏi, thêm flag ở cuối, ví dụ:
@@ -114,3 +114,14 @@ Controller/Router → Service → Repository → Model
 ```
 
 Controller không được đụng thẳng vào database; mọi thao tác dữ liệu phải qua đúng lớp của nó. AI tạo code mới trong project sẽ tự đọc và tuân theo rule này.
+
+## Phát hành bản mới (dành cho maintainer)
+
+Các ví dụ ghim version ở trên (`#v0.2.0` trong URL `npx`/`/plugin marketplace add`) chỉ hoạt động nếu tag đó thực sự tồn tại trên GitHub — bump số version trong `package.json`/`plugin.json`/`.claude-plugin/plugin.json` không tự tạo ra tag. Sau khi commit phần code + bump version:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Thiếu bước push tag này, mọi ví dụ `#v0.2.0` trong README sẽ ra lỗi "ref not found" cho tới khi tag được tạo.

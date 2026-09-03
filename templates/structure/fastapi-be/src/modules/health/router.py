@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 
+from src.modules.health.repository import HealthRepository
 from src.modules.health.schemas import HealthResponse
 from src.modules.health.service import HealthService
-from src.modules.health.repository import HealthRepository
 
 router = APIRouter(prefix="/health", tags=["health"])
 

@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 
-import { HealthService } from '../../../src/modules/health/health.service';
 import { HealthRepository } from '../../../src/modules/health/health.repository';
+import { HealthService } from '../../../src/modules/health/health.service';
 
 describe('HealthService', () => {
   let service: HealthService;

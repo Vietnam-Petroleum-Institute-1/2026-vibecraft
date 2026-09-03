@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import Button from './components/common/Button.vue';
+import { Button } from './components/common/Button';
+import { ModalContainer } from './components/common/Modal';
+import { NotificationContainer } from './components/common/Notification';
 import { useHealth } from './composables/useHealth';
 
 // Sample page demonstrating the required call chain: component → composable
@@ -15,4 +17,8 @@ const { health, error, check } = useHealth();
     <pre v-if="health" class="rounded bg-gray-100 p-4">{{ JSON.stringify(health, null, 2) }}</pre>
     <Button @click="check">Re-check backend health</Button>
   </main>
+  <!-- Renders modal.confirm()/notification.success()/... calls made anywhere
+     in the app — see components/common/Modal and Notification. -->
+  <ModalContainer />
+  <NotificationContainer />
 </template>

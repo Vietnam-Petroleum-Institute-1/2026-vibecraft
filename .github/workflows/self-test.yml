@@ -1,0 +1,238 @@
+# .github/workflows/self-test.yml
+#
+# Verifies templates/ actually install + audit + build + lint + test before
+# a version-pin change reaches main — this is what a `pnpm/pip install` run
+# by an end user via `init.sh` would hit, exercised here first instead of
+# there. Exists because of a real incident: templates pinned a vite/vitest
+# combo that dragged in a vulnerable transitive esbuild, only caught when a
+# user actually installed it — see plans/03-code-quality-configs.md "Cập
+# nhật (version sweep)".
+#
+# Scope kept narrow on purpose so it doesn't slow down unrelated PRs:
+#   - `paths:` filter — only runs when a PR touches a version-pin-relevant
+#     file (templates/quality/**, template package.json/requirements/pyproject,
+#     or init.sh's copy wiring). Docs-only, skill-only, unrelated script PRs
+#     never trigger this.
+#   - Dependabot PRs always touch one of those paths by definition, so they're
+#     covered without a separate `if: github.actor == 'dependabot[bot]'` rule.
+#   - Weekly schedule catches drift NOT caused by our own commits (e.g. a
+#     plugin dropping peer support for a pin nobody here touched).
+# Mark `self-test-gate` as a required status check in branch protection to
+# actually block merges — this workflow file alone doesn't enforce that.
+#
+# Actions pinned to commit SHA (not @main/@v-tag), same policy and same SHAs
+# already used in templates/ci/pr-check.yml.
+name: Template Self-Test
+
+on:
+  pull_request:
+    paths:
+      - "templates/quality/**"
+      - "templates/structure/**/package.json"
+      - "templates/structure/**/pyproject.toml"
+      - "templates/structure/**/requirements*.txt"
+      - "scripts/init.sh"
+  schedule:
+    - cron: "0 3 * * 1" # Monday 03:00 UTC — weekly canary, not merge-blocking by itself
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Frontend combos ───────────────────────────────────────
+  fe:
+    name: FE – ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: react-vite-fe
+            dir: templates/structure/react-vite-fe
+            eslint_src: templates/quality/js/eslint.config.react.js
+            eslint_dest: eslint.config.js
+            tsconfig: templates/quality/js/tsconfig.vite.json
+            lint_glob: "src/**/*.{ts,tsx}"
+          - name: vue-vite-fe
+            dir: templates/structure/vue-vite-fe
+            eslint_src: templates/quality/js/eslint.config.vue.js
+            eslint_dest: eslint.config.js
+            tsconfig: templates/quality/js/tsconfig.vite.json
+            lint_glob: "src/**/*.{ts,vue}"
+          - name: nextjs-fe
+            dir: templates/structure/nextjs-fe
+            eslint_src: templates/quality/js/eslint.config.nextjs.mjs
+            eslint_dest: eslint.config.mjs
+            tsconfig: templates/quality/js/tsconfig.nextjs.json
+            lint_glob: "src/**/*.{ts,tsx}"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Assemble scratch scaffold
+        run: |
+          mkdir -p /tmp/scaffold
+          cp -r "${{ matrix.dir }}/." /tmp/scaffold/
+          cp "${{ matrix.eslint_src }}" "/tmp/scaffold/${{ matrix.eslint_dest }}"
+          cp "${{ matrix.tsconfig }}" /tmp/scaffold/tsconfig.json
+          cp templates/quality/js/.prettierrc /tmp/scaffold/.prettierrc
+          sed -i 's/\[PROJECT_NAME\]/self-test/g' /tmp/scaffold/package.json
+
+      - name: Install
+        working-directory: /tmp/scaffold
+        run: npm install
+
+      - name: Audit (fails on high/critical)
+        working-directory: /tmp/scaffold
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        working-directory: /tmp/scaffold
+        run: npx eslint "${{ matrix.lint_glob }}"
+
+      - name: Type-check + build
+        working-directory: /tmp/scaffold
+        run: npm run build
+
+      - name: Test
+        working-directory: /tmp/scaffold
+        run: npx vitest run
+
+  # ─── Backend combos (JS/TS) ────────────────────────────────
+  be-js:
+    name: BE (JS/TS) – ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: nestjs-be
+            dir: templates/structure/nestjs-be
+            package: templates/quality/js/package.nestjs.json
+            build_cmd: npx nest build
+            test_cmd: npx jest && npx jest --config ./tests/jest-e2e.json
+          - name: express-be
+            dir: templates/structure/express-be
+            package: templates/quality/js/package.express.json
+            build_cmd: npx tsc -p tsconfig.build.json
+            test_cmd: npx jest
+          - name: js-tool
+            dir: templates/structure/js-tool
+            package: templates/quality/js/package.script.json
+            build_cmd: npx tsc -p tsconfig.build.json
+            test_cmd: npx jest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Assemble scratch scaffold
+        run: |
+          mkdir -p /tmp/scaffold
+          cp -r "${{ matrix.dir }}/." /tmp/scaffold/
+          cp "${{ matrix.package }}" /tmp/scaffold/package.json
+          cp templates/quality/js/eslint.config.mjs /tmp/scaffold/eslint.config.mjs
+          cp templates/quality/js/tsconfig.base.json /tmp/scaffold/tsconfig.json
+          cp templates/quality/js/.prettierrc /tmp/scaffold/.prettierrc
+          sed -i 's/\[PROJECT_NAME\]/self-test/g' /tmp/scaffold/package.json
+
+      - name: Install
+        working-directory: /tmp/scaffold
+        run: npm install
+
+      - name: Audit (fails on high/critical)
+        working-directory: /tmp/scaffold
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        working-directory: /tmp/scaffold
+        run: npx eslint "{src,tests}/**/*.ts"
+
+      - name: Build
+        working-directory: /tmp/scaffold
+        run: ${{ matrix.build_cmd }}
+
+      - name: Test
+        working-directory: /tmp/scaffold
+        run: ${{ matrix.test_cmd }}
+
+  # ─── Backend combos (Python) ───────────────────────────────
+  be-python:
+    name: BE (Python) – ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: fastapi-be
+            dir: templates/structure/fastapi-be
+            requirements: templates/quality/python/requirements.base.txt
+            pyproject: templates/quality/python/pyproject.toml
+          - name: python-tool
+            dir: templates/structure/python-tool
+            requirements: templates/quality/python/requirements.tool.txt
+            pyproject: templates/quality/python/pyproject.tool.toml
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Assemble scratch scaffold
+        run: |
+          mkdir -p /tmp/scaffold
+          cp -r "${{ matrix.dir }}/." /tmp/scaffold/
+          cp "${{ matrix.requirements }}" /tmp/scaffold/requirements.txt
+          cp "${{ matrix.pyproject }}" /tmp/scaffold/pyproject.toml
+
+      - name: Install
+        working-directory: /tmp/scaffold
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt pip-audit
+
+      - name: Audit (fails on any known vuln)
+        working-directory: /tmp/scaffold
+        run: pip-audit -r requirements.txt
+
+      - name: Ruff lint + format check
+        working-directory: /tmp/scaffold
+        run: |
+          ruff check src/ tests/
+          ruff format --check src/ tests/
+
+      - name: Mypy
+        working-directory: /tmp/scaffold
+        run: mypy src/
+
+      - name: Test
+        working-directory: /tmp/scaffold
+        run: pytest
+
+  # ─── Gate: mark this as a required check in branch protection ─
+  self-test-gate:
+    name: Self-Test Gate
+    runs-on: ubuntu-latest
+    needs: [fe, be-js, be-python]
+    if: always()
+    steps:
+      - name: Check all combos passed
+        run: |
+          if [[ "${{ needs.fe.result }}" != "success" ]]; then
+            echo "FE combo(s) failed"; exit 1
+          fi
+          if [[ "${{ needs.be-js.result }}" != "success" ]]; then
+            echo "JS/TS backend combo(s) failed"; exit 1
+          fi
+          if [[ "${{ needs.be-python.result }}" != "success" ]]; then
+            echo "Python backend combo(s) failed"; exit 1
+          fi
+          echo "All templates install + audit + build + lint + test clean"

@@ -1,7 +1,7 @@
 import pytest
 
-from src.modules.health.service import HealthService
 from src.modules.health.repository import HealthRepository
+from src.modules.health.service import HealthService
 
 
 @pytest.mark.asyncio

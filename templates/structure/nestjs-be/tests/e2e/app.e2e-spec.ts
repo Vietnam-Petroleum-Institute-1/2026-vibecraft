@@ -23,7 +23,6 @@ describe('AppModule (e2e)', () => {
   it('GET /health returns 200 and status ok', async () => {
     // app.getHttpServer() is typed `any` in @nestjs/common — this cast is the
     // standard, documented way to bridge it to supertest's expected type.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const server = app.getHttpServer() as Parameters<typeof request>[0];
     const res = await request(server).get('/health');
     expect(res.status).toBe(200);

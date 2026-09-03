@@ -11,16 +11,31 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # ─── Resolve lowercase owner/repo image name (GHCR requires the full
+  # ─── namespace and rejects uppercase — github.repository_owner can be
+  # ─── mixed-case, so it must be lowercased in a shell step) ──────────
+  prepare:
+    name: Resolve Image Name
+    runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.image-name.outputs.value }}
+    steps:
+      - name: Compute lowercase image name
+        id: image-name
+        run: echo "value=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
   # ─── Build Docker image (local, for scanning before push) ──
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    needs: [prepare]
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE_NAME: ${{ needs.prepare.outputs.image_name }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -45,10 +60,11 @@ jobs:
   trivy-scan:
     name: Trivy Image + Config Scan
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [prepare, build]
     permissions:
       contents: read
-      security-events: write
+    env:
+      IMAGE_NAME: ${{ needs.prepare.outputs.image_name }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -87,10 +103,14 @@ jobs:
           output: "sbom.cyclonedx.json"
         if: always()
 
-      - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+      # No upload-sarif (GHAS billed per committer/month on this private repo)
+      - name: Upload Trivy reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          sarif_file: trivy-image.sarif
+          name: trivy-reports-${{ github.sha }}
+          path: |
+            trivy-image.sarif
+            trivy-config.sarif
         if: always()
 
       - name: Upload SBOM artifact
@@ -104,10 +124,12 @@ jobs:
   push-image:
     name: Push Image to Registry
     runs-on: ubuntu-latest
-    needs: [build, trivy-scan]
+    needs: [prepare, build, trivy-scan]
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE_NAME: ${{ needs.prepare.outputs.image_name }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -139,11 +161,16 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ─── Deploy to staging ────────────────────────────────────
+  # TODO: enable once a real staging server exists — "Deploy" is a placeholder
+  # echo and the health check always fails with nothing listening at STAGING_URL.
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [push-image]
+    needs: [prepare, push-image]
     environment: staging
+    env:
+      IMAGE_NAME: ${{ needs.prepare.outputs.image_name }}
+    if: false
     steps:
       - name: Deploy
         run: |
@@ -157,10 +184,12 @@ jobs:
           curl --fail "${{ vars.STAGING_URL }}/health" || exit 1
 
   # ─── ZAP DAST after staging deploy (advisory, non-blocking) ─
+  # TODO: enable together with deploy-staging above
   dast-zap:
     name: DAST – OWASP ZAP
     runs-on: ubuntu-latest
     needs: [deploy-staging]
+    if: false
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 

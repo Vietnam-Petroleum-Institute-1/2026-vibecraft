@@ -95,7 +95,7 @@ check_existing_files() {
     .github .husky .agents .gemini .claude .cursor .clinerules .continue
     .windsurfrules .rules
     package.json tsconfig.json pyproject.toml requirements.txt
-    .pre-commit-config.yaml .gitleaks.toml .editorconfig .eslintrc.json .prettierrc
+    .pre-commit-config.yaml .gitleaks.toml .editorconfig eslint.config.js eslint.config.mjs .prettierrc
   )
   local existing=() p
   for p in "${candidates[@]}"; do
@@ -642,7 +642,7 @@ generate_quality() {
     [[ "$TYPE" == "tool-script" ]] && be_dir="$TARGET_DIR"
 
     copy_file "$TEMPLATES_DIR/quality/js/.prettierrc"           "$be_dir/.prettierrc"
-    copy_file "$TEMPLATES_DIR/quality/js/.eslintrc.json"        "$be_dir/.eslintrc.json"
+    copy_file "$TEMPLATES_DIR/quality/js/eslint.config.mjs"     "$be_dir/eslint.config.mjs"
     copy_file "$TEMPLATES_DIR/quality/js/tsconfig.base.json"    "$be_dir/tsconfig.json"
     # tsconfig.build.json (NestJS/Express/js-tool only) already came from
     # generate_structure()'s per-case structure/ copy — nothing to do here.
@@ -673,16 +673,16 @@ generate_quality() {
 
     case "$FE" in
       nextjs)
-        copy_file "$TEMPLATES_DIR/quality/js/.eslintrc.nextjs.json" "$fe_dir/.eslintrc.json"
-        copy_file "$TEMPLATES_DIR/quality/js/tsconfig.nextjs.json"  "$fe_dir/tsconfig.json"
+        copy_file "$TEMPLATES_DIR/quality/js/eslint.config.nextjs.mjs" "$fe_dir/eslint.config.mjs"
+        copy_file "$TEMPLATES_DIR/quality/js/tsconfig.nextjs.json"     "$fe_dir/tsconfig.json"
         ;;
       react-vite)
-        copy_file "$TEMPLATES_DIR/quality/js/.eslintrc.react.json"  "$fe_dir/.eslintrc.json"
-        copy_file "$TEMPLATES_DIR/quality/js/tsconfig.vite.json"    "$fe_dir/tsconfig.json"
+        copy_file "$TEMPLATES_DIR/quality/js/eslint.config.react.js"   "$fe_dir/eslint.config.js"
+        copy_file "$TEMPLATES_DIR/quality/js/tsconfig.vite.json"       "$fe_dir/tsconfig.json"
         ;;
       vue-vite)
-        copy_file "$TEMPLATES_DIR/quality/js/.eslintrc.vue.json"    "$fe_dir/.eslintrc.json"
-        copy_file "$TEMPLATES_DIR/quality/js/tsconfig.vite.json"    "$fe_dir/tsconfig.json"
+        copy_file "$TEMPLATES_DIR/quality/js/eslint.config.vue.js"     "$fe_dir/eslint.config.js"
+        copy_file "$TEMPLATES_DIR/quality/js/tsconfig.vite.json"       "$fe_dir/tsconfig.json"
         ;;
     esac
   fi
@@ -762,13 +762,94 @@ generate_ci() {
 
   log_info "Generating GitHub Actions workflows..."
 
-  copy_file "$TEMPLATES_DIR/ci/pr-check.yml"            "$TARGET_DIR/.github/workflows/pr-check.yml"
+  # frontend-quality's "Build check" step in pr-check.yml defaults to
+  # NEXT_PUBLIC_API_URL — correct for Next.js, but react-vite/vue-vite read
+  # VITE_API_URL instead. Same substitution generate_scaffold() already does
+  # for frontend/.env.example (see `env_var` there) — this is the only
+  # placeholder in pr-check.yml, so a plain read/replace/write suffices
+  # without a copy_file() + separate sed pass.
+  local pr_check_content
+  pr_check_content=$(cat "$TEMPLATES_DIR/ci/pr-check.yml")
+  if [[ -n "$FE" && "$FE" != "nextjs" ]]; then
+    pr_check_content="${pr_check_content//NEXT_PUBLIC_API_URL/VITE_API_URL}"
+  fi
+  write_file "$TARGET_DIR/.github/workflows/pr-check.yml" "$pr_check_content"
+
   copy_file "$TEMPLATES_DIR/ci/push-main.yml"           "$TARGET_DIR/.github/workflows/push-main.yml"
 
   # scheduled-security.yml chứa Dep-Check/Lynis cho BE + server chạy lâu dài — bỏ qua với app-fe-only
   if [[ "$TYPE" != "app-fe-only" ]]; then
     copy_file "$TEMPLATES_DIR/ci/scheduled-security.yml"  "$TARGET_DIR/.github/workflows/scheduled-security.yml"
   fi
+
+  generate_dependabot
+}
+
+# ── Generate Dependabot config ──────────────────────────────────
+# Exact-pinned deps (no ^/~, per this repo's non-negotiable rule) drift
+# silently over time — Dependabot turns that drift into reviewable PRs
+# instead of another manual audit like the one that produced this function.
+# GitHub-native (not Renovate): zero extra app install for end users, and
+# it already understands the SHA-pinned Actions this repo's CI uses.
+generate_dependabot() {
+  local updates=""
+
+  updates+='  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+'
+
+  if [[ -n "$FE" ]]; then
+    updates+='  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      frontend-minor-patch:
+        update-types: ["minor", "patch"]
+
+'
+  fi
+
+  # generate_ci() already returns before calling this for tool-script (no
+  # CI for tools at all), so backend deps here always live under /backend.
+  if [[ "$TYPE" != "app-fe-only" ]]; then
+    local be_dir_rel="/backend"
+
+    if [[ "$LANG" == "typescript" ]]; then
+      updates+="  - package-ecosystem: \"npm\"
+    directory: \"$be_dir_rel\"
+    schedule:
+      interval: \"weekly\"
+    open-pull-requests-limit: 10
+    groups:
+      backend-minor-patch:
+        update-types: [\"minor\", \"patch\"]
+
+"
+    fi
+
+    if [[ "$LANG" == "python" ]]; then
+      updates+="  - package-ecosystem: \"pip\"
+    directory: \"$be_dir_rel\"
+    schedule:
+      interval: \"weekly\"
+    open-pull-requests-limit: 10
+    groups:
+      backend-minor-patch:
+        update-types: [\"minor\", \"patch\"]
+
+"
+    fi
+  fi
+
+  write_file "$TARGET_DIR/.github/dependabot.yml" "version: 2
+updates:
+${updates}"
 }
 
 # ── Scaffold an empty docs/ for the project's own documentation ─

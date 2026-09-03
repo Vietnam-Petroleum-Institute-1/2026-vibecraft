@@ -1,5 +1,5 @@
-from src.modules.health.schemas import HealthResponse
 from src.modules.health.repository import HealthRepository
+from src.modules.health.schemas import HealthResponse
 
 
 class HealthService:

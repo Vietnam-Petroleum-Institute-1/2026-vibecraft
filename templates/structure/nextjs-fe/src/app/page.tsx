@@ -14,10 +14,12 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   const checkHealth = () => {
-    setError(null);
     healthService
       .check()
-      .then(setHealth)
+      .then((data) => {
+        setHealth(data);
+        setError(null);
+      })
       .catch((err: Error) => setError(err.message));
   };
 

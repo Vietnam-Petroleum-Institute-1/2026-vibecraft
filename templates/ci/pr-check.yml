@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   PYTHON_VERSION: "3.12"
 
 jobs:
@@ -154,6 +154,12 @@ jobs:
       - name: Run tests
         run: pnpm test:cov
 
+      - name: Upload coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+
       - name: Build check
         run: pnpm build
         env:
@@ -166,7 +172,6 @@ jobs:
     needs: [secrets-scan]
     permissions:
       contents: read
-      security-events: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -186,36 +191,12 @@ jobs:
             .
         continue-on-error: true
 
-      - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
-        with:
-          sarif_file: semgrep.sarif
-        if: always()
-
-  # ─── OWASP Dependency-Check (SCA) ─────────────────────────
-  sca-dependency-check:
-    name: SCA – Dependency Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@75ba02d6183445fe0761d26e836bde58b1560600 # 1.1.0
-        with:
-          project: "${{ github.repository }}"
-          path: "."
-          format: "HTML,SARIF,JSON"
-          args: >-
-            --failOnCVSS 7
-            --enableRetired
-        env:
-          JAVA_HOME: /opt/jdk
-
-      - name: Upload report
+      # No upload-sarif (GHAS billed per committer/month on this private repo)
+      - name: Upload Semgrep report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dependency-check-report
-          path: reports/
+          name: semgrep-report
+          path: semgrep.sarif
         if: always()
 
   # ─── Quality gate summary ─────────────────────────────────
@@ -225,7 +206,6 @@ jobs:
     needs:
       - secrets-scan
       - sast-semgrep
-      - sca-dependency-check
     if: always()
     steps:
       - name: Check required jobs passed
